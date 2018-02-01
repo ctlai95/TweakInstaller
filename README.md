@@ -4,4 +4,4 @@ For use with [Electra Jailbreak](https://coolstar.org/electra/).
 
 ## Usage
 
-`./install.sh <path to .deb>`
+`./run.sh <install|uninstall> <path to .deb>`
