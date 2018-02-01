@@ -4,7 +4,6 @@ readonly BASE_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 readonly COMMANDS_DIR="$BASE_DIR/commands"
 readonly DEB_FILE="$1"
 readonly TMP_DIR="tmp"
-
 readonly LOCAL_DIR_LIST=(
     "Library/MobileSubstrate/DynamicLibraries"
     "Library/PreferenceBundles"
@@ -18,9 +17,10 @@ readonly MOBILE_DIR_LIST=(
     "/bootstrap/Library/PreferenceLoader/Preferences"
     "/bootstrap/Library/Themes"
 )
-
 readonly RED='\033[0;31m'
 readonly NC='\033[0m' # No Color
+
+respring_required=false
 
 source config
 
@@ -47,10 +47,17 @@ install_item() {
     if [ -d "$source_dir" ]; then
         cd "$source_dir"
         for item in *; do
-            if [ -f $item ]; then
+            exists=$(check_exists "$target_dir" "$item")
+            if [ "$exists" == "true" ]; then
+                echo "$item already exists in $target_dir. Skipping..."
+                continue
+            fi
+            if [ -f "$item" ]; then
                 scp "$item" "root@$IP_ADDR:$target_dir"
-            elif [ -d $item ]; then
+                respring_required = true
+            elif [ -d "$item" ]; then
                 scp -r "$item" "root@$IP_ADDR:$target_dir"
+                respring_required = true
             fi
             if [ "$source_dir" == "Library/PreferenceLoader/Preferences" ]; then
                 set_permissions "$item"
@@ -58,6 +65,10 @@ install_item() {
         done
         cd "$BASE_DIR/$TMP_DIR"
     fi
+}
+
+check_exists() {
+    ssh "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/check_exists.sh" "$1" "$2"
 }
 
 set_permissions() {
@@ -91,7 +102,9 @@ if [ $# -eq 1 ]; then
             install_item "$index"
         done
         cleanup
-        respring
+        if [ "$respring_required" = true ]; then
+            respring
+        fi
     else
         panic "$DEB_FILE is not a .deb file!"
     fi
