@@ -42,8 +42,8 @@ extract_data() {
 }
 
 install_item() {
-    source_dir=${LOCAL_DIR_LIST[$1]}
-    target_dir=${MOBILE_DIR_LIST[$1]}
+    source_dir="${LOCAL_DIR_LIST[$1]}"
+    target_dir="${MOBILE_DIR_LIST[$1]}"
     if [ -d "$source_dir" ]; then
         cd "$source_dir"
         for item in *; do
@@ -87,10 +87,11 @@ print_usage() {
 if [ $# -eq 1 ]; then
     if [[ "$DEB_FILE" == *.deb ]]; then
         extract_data
-        for index in ${!LOCAL_DIR_LIST[@]}; do
-            install_item $index
+        for index in "${!LOCAL_DIR_LIST[@]}"; do
+            install_item "$index"
         done
         cleanup
+        respring
     else
         panic "$DEB_FILE is not a .deb file!"
     fi
