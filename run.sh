@@ -11,10 +11,10 @@ readonly LOCAL_DIR_LIST=(
 )
 # The order of the paths must match the ones above
 readonly MOBILE_DIR_LIST=(
-    "/bootstrap/Library/SBInject"
-    "/bootstrap/Library/PreferenceBundles"
-    "/bootstrap/Library/PreferenceLoader/Preferences"
-    "/bootstrap/Library/Themes"
+    "/Library/TweakInject"
+    "/Library/PreferenceBundles"
+    "/Library/PreferenceLoader/Preferences"
+    "/Library/Themes"
 )
 readonly RED='\033[0;31m'
 readonly NC='\033[0m' # No Color
@@ -24,6 +24,10 @@ readonly DEB_FILE="$2"
 
 respring_required=false
 source config
+
+copy_key() {
+	ssh-copy-id -i "$ID_RSA_PATH" -p "$PORT" "root@$IP_ADDR" &> /dev/null
+}
 
 extract_data() {
     if [ -d "$TMP_DIR" ]; then
@@ -56,10 +60,10 @@ perform_action() {
                     continue
                 fi
                 if [ -f "$item" ]; then
-                    scp "$item" "root@$IP_ADDR:$target_dir"
+                    scp -P "$PORT" "$item" "root@$IP_ADDR:$target_dir"
                     respring_required=true
                 elif [ -d "$item" ]; then
-                    scp -r "$item" "root@$IP_ADDR:$target_dir"
+                    scp -P "$PORT" -r "$item" "root@$IP_ADDR:$target_dir"
                     respring_required=true
                 fi
                 if [ "$source_dir" == "Library/PreferenceLoader/Preferences" ]; then
@@ -80,27 +84,28 @@ perform_action() {
 }
 
 check_exists() {
-    ssh "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/check_exists.sh" "$1" "$2"
+    ssh -p "$PORT" "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/check_exists.sh" "$1" "$2"
 }
 
 set_permissions() {
     echo "Setting permissions for $1..."
-    ssh "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/set_perm.sh" "$1"
+    ssh -p "$PORT" "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/set_perm.sh" "$1"
 }
 
 remove() {
-    ssh "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/remove.sh" "$1"
+    ssh -p "$PORT" "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/remove.sh" "$1"
 }
 
 respring() {
     echo "Respringing device..."
-    ssh "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/respring.sh"
+    ssh -p "$PORT" "root@$IP_ADDR" "bash -s" < "$COMMANDS_DIR/respring.sh"
 }
 
 cleanup() {
     cd "$BASE_DIR"
     rm -rf "$TMP_DIR"
 }
+
 panic() {
     printf "${RED}$1${NC}\n"
     cleanup
@@ -112,6 +117,7 @@ print_usage() {
 }
 
 if [ $# -eq 2 ]; then
+	copy_key
     if [[ "$ACTION" == "install" || "$ACTION" == "uninstall" ]]; then
         if [[ "$DEB_FILE" == *.deb ]]; then
             extract_data
